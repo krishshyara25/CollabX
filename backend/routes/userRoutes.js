@@ -9,4 +9,5 @@ router.post('/login', loginUser);
 router.post('/google', googleLogin);
 router.get('/profile', protect, getProfile);
 
+
 module.exports = router;

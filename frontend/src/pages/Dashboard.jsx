@@ -1,172 +1,154 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { Plus, Video } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { Users, Lock } from 'lucide-react';
+import { useSocket } from '../context/SocketContext';
 
 const Dashboard = () => {
-  const [rooms, setRooms] = useState([]);
-  const [newRoomName, setNewRoomName] = useState('');
-  const [isPrivate, setIsPrivate] = useState(false);
-  const [passcode, setPasscode] = useState('');
-  const [joinRoomId, setJoinRoomId] = useState('');
-  const [joinPasscode, setJoinPasscode] = useState('');
+  const [meetingIdToJoin, setMeetingIdToJoin] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
   const { user } = useAuth();
+  const socket = useSocket();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    fetchRooms();
-  }, []);
+  // Create Room using Backend API
+  const handleCreateRoom = async () => {
+    setLoading(true);
+    setError('');
 
-  const fetchRooms = async () => {
-    try {
-      const { data } = await axios.get('http://localhost:5000/api/rooms');
-      setRooms(data);
-    } catch (error) {
-      console.error('Error fetching rooms', error);
-    }
-  };
-
-  const createRoom = async (e) => {
-    e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-      const { data } = await axios.post('http://localhost:5000/api/rooms', {
-        name: newRoomName,
-        isPrivate,
-        passcode: isPrivate ? passcode : undefined
-      }, config);
+      const { data } = await axios.post(
+        'http://localhost:5000/api/rooms',
+        { 
+          name: `${user.username}'s Study Room`, 
+          description: 'Collaborative study session',
+          isPrivate: false 
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      // Join socket room for real-time features
+      if (socket) {
+        socket.emit('join_room', { roomId: data._id, username: user.username });
+      }
+
       navigate(`/room/${data._id}`);
-    } catch (error) {
-      console.error('Error creating room', error);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to create room');
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const joinRoom = async (roomId) => {
-     try {
-         const token = localStorage.getItem('token');
-         const config = { headers: { Authorization: `Bearer ${token}` } };
-         await axios.post(`http://localhost:5000/api/rooms/${roomId}/join`, {}, config);
-         navigate(`/room/${roomId}`);
-     } catch(err) {
-         console.log(err);
-         alert(err.response?.data?.message || 'Error joining room');
-     }
-  };
+  // Join existing Room
+  const handleJoinRoom = async (e) => {
+    e.preventDefault();
+    const roomId = meetingIdToJoin.trim();
+    
+    if (!roomId) {
+      setError("Please enter a room ID");
+      return;
+    }
 
-  const submitJoinById = async (e) => {
-      e.preventDefault();
-      try {
-          const token = localStorage.getItem('token');
-          const config = { headers: { Authorization: `Bearer ${token}` } };
-          await axios.post(`http://localhost:5000/api/rooms/${joinRoomId}/join`, { passcode: joinPasscode }, config);
-          navigate(`/room/${joinRoomId}`);
-      } catch(err) {
-          console.log(err);
-          alert(err.response?.data?.message || 'Error joining room. Invalid ID or Passcode.');
+    setLoading(true);
+    setError('');
+
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(
+        `http://localhost:5000/api/rooms/${roomId}/join`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (socket) {
+        socket.emit('join_room', { roomId, username: user.username });
       }
+
+      navigate(`/room/${roomId}`);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Room not found or invalid code');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '2rem' }}>
-      <div className="glass-card" style={{ height: 'fit-content' }}>
-        <h3>Create a Study Room</h3>
-        <p style={{ marginBottom: '1.5rem', fontSize: '0.9rem' }}>Start a fresh session with your peers.</p>
-        
-        <form onSubmit={createRoom}>
-          <div className="input-group">
-            <label className="input-label">Room Name</label>
-            <input 
-              type="text" 
-              className="input-field" 
-              value={newRoomName} 
-              onChange={(e) => setNewRoomName(e.target.value)} 
-              required 
-            />
-          </div>
+    <div style={{ 
+      minHeight: '100vh', 
+      display: 'flex', 
+      alignItems: 'center', 
+      justifyContent: 'center',
+      padding: '2rem'
+    }}>
+      <div style={{ width: '100%', maxWidth: '680px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
+          <h1>Welcome, {user?.username}!</h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem' }}>
+            Create or join a study room to collaborate with others
+          </p>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
           
-          <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <input 
-              type="checkbox" 
-              id="private" 
-              checked={isPrivate} 
-              onChange={(e) => setIsPrivate(e.target.checked)} 
-            />
-            <label htmlFor="private">Private Room</label>
+          {/* Create Room */}
+          <div className="glass-panel" style={{ padding: '2.5rem', textAlign: 'center' }}>
+            <Plus size={48} color="var(--primary)" style={{ marginBottom: '1.5rem' }} />
+            <h2>Create Study Room</h2>
+            <p style={{ color: 'var(--text-muted)', margin: '1rem 0 2rem' }}>
+              Start a new collaborative session
+            </p>
+            <button 
+              onClick={handleCreateRoom}
+              className="btn btn-primary"
+              style={{ width: '100%', padding: '1.1rem' }}
+              disabled={loading}
+            >
+              {loading ? 'Creating...' : 'Create New Room'}
+            </button>
           </div>
-          
-          {isPrivate && (
-            <div className="input-group">
-              <label className="input-label">Passcode</label>
-              <input 
-                type="text" 
-                className="input-field" 
-                value={passcode} 
-                onChange={(e) => setPasscode(e.target.value)} 
-                required 
+
+          {/* Join Room */}
+          <div className="glass-panel" style={{ padding: '2.5rem', textAlign: 'center' }}>
+            <Video size={48} color="var(--success)" style={{ marginBottom: '1.5rem' }} />
+            <h2>Join Study Room</h2>
+            <p style={{ color: 'var(--text-muted)', margin: '1rem 0 1.5rem' }}>
+              Enter room ID to join
+            </p>
+            
+            <form onSubmit={handleJoinRoom}>
+              <input
+                type="text"
+                className="input-field"
+                placeholder="Room ID"
+                value={meetingIdToJoin}
+                onChange={(e) => setMeetingIdToJoin(e.target.value)}
+                disabled={loading}
               />
-            </div>
-          )}
-          
-          <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>Create Room</button>
-        </form>
-
-        <div style={{ margin: '2rem 0', height: '1px', background: 'var(--border-color)' }}></div>
-
-        <h3>Join by ID</h3>
-        <p style={{ marginBottom: '1.5rem', fontSize: '0.9rem' }}>Have a room code? Enter it below.</p>
-        <form onSubmit={submitJoinById}>
-          <div className="input-group">
-            <label className="input-label">Room ID</label>
-            <input 
-              type="text" 
-              className="input-field" 
-              value={joinRoomId} 
-              onChange={(e) => setJoinRoomId(e.target.value)} 
-              required 
-            />
-          </div>
-          {joinRoomId.length > 5 && (
-            <div className="input-group">
-                <label className="input-label">Passcode (if private)</label>
-                <input 
-                  type="text" 
-                  className="input-field" 
-                  value={joinPasscode} 
-                  onChange={(e) => setJoinPasscode(e.target.value)} 
-                />
-            </div>
-          )}
-          <button type="submit" className="btn btn-outline" style={{ width: '100%' }}>Join Room</button>
-        </form>
-      </div>
-
-      <div>
-        <h3>Public Active Rooms</h3>
-        <p style={{ marginBottom: '1.5rem' }}>Join an existing session and start studying.</p>
-        
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1rem' }}>
-          {rooms.map(room => (
-            <div key={room._id} className="glass-card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <h4 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                {room.name}
-              </h4>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                <Users size={16} /> {room.participants.length} Participant(s)
-              </div>
-              <p style={{ fontSize: '0.85rem' }}>Created by: {room.creator?.username}</p>
-              
               <button 
-                onClick={() => joinRoom(room._id)} 
-                className="btn btn-outline" 
-                style={{ marginTop: 'auto', width: '100%' }}
+                type="submit"
+                className="btn btn-outline"
+                style={{ 
+                  width: '100%', 
+                  padding: '1.1rem', 
+                  marginTop: '1rem',
+                  color: 'var(--success)', 
+                  borderColor: 'var(--success)' 
+                }}
+                disabled={loading}
               >
-                Join Room
+                {loading ? 'Joining...' : 'Join Room'}
               </button>
-            </div>
-          ))}
-          {rooms.length === 0 && <p>No active public rooms at the moment.</p>}
+            </form>
+
+            {error && <p style={{ color: 'var(--danger)', marginTop: '1rem' }}>{error}</p>}
+          </div>
         </div>
       </div>
     </div>

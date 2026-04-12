@@ -28,7 +28,7 @@ const Whiteboard = () => {
         setRoomData(data);
       } catch (error) {
         console.error('Error fetching room:', error);
-        navigate('/');
+        navigate(`/room/${id}`);
       }
     };
     fetchRoom();
