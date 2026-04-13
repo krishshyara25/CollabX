@@ -15,7 +15,7 @@ const Login = () => {
     e.preventDefault();
     try {
       await login(email, password);
-      navigate('/');
+      navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed');
     }
@@ -68,7 +68,7 @@ const Login = () => {
                 onSuccess={async (credentialResponse) => {
                     try {
                         await googleLogin(credentialResponse.credential);
-                        navigate('/');
+                        navigate('/dashboard');
                     } catch(err) {
                         setError('Google Auth failed');
                     }
