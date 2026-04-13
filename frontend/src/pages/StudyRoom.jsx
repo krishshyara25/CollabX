@@ -1,183 +1,159 @@
-import React, { useEffect, useState } from 'react';
+// pages/StudyRoom.jsx  →  Replace your current StudyRoom with this improved version
+
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
-import ChatBox from '../components/ChatBox';
-import Whiteboard from '../components/Whiteboard';
-import PomodoroTimer from '../components/PomodoroTimer';
-import VideoGrid from '../components/VideoGrid';
-import PersonalNotes from '../components/PersonalNotes';
-import { ArrowLeft, Video, VideoOff, Lock, Unlock, MessageSquare, Palette, Timer, StickyNote, ExternalLink } from 'lucide-react';
+import { Users, MessageSquare, Palette, Timer, StickyNote, Video, Copy, ArrowRight } from 'lucide-react';
+import axios from 'axios';
 
 const StudyRoom = () => {
   const { id } = useParams();
   const { user } = useAuth();
   const socket = useSocket();
   const navigate = useNavigate();
-  const [isRecording, setIsRecording] = useState(false);
-  const [isWhiteboardLocked, setIsWhiteboardLocked] = useState(false);
+
   const [roomData, setRoomData] = useState(null);
-  
-  const isCreator = roomData && (String(user._id) === String(roomData.creator._id || roomData.creator) || user.role === 'admin');
-  
-  // Video Call State
-  const [isVideoCallActive, setIsVideoCallActive] = useState(false);
-  const [incomingCall, setIncomingCall] = useState(null);
+  const [onlineUsers, setOnlineUsers] = useState([]);
 
   useEffect(() => {
-    // Fetch room to know the creator
-    fetch(`http://localhost:5000/api/rooms/${id}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}`}})
-        .then(async res => {
-            if(!res.ok) throw new Error("Room fetch failed");
-            return res.json();
-        })
-        .then(data => setRoomData(data))
-        .catch(console.error);
+    const fetchRoom = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const { data } = await axios.get(`http://localhost:5000/api/rooms/${id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setRoomData(data);
+      } catch (err) {
+        console.error(err);
+        navigate('/');
+      }
+    };
 
-    if (socket && user) {
+    fetchRoom();
+
+    if (socket) {
       socket.emit('join_room', { roomId: id, username: user.username });
-      
-      socket.on('recording_status', (data) => {
-          setIsRecording(data.isRecording);
-      });
-      
-      socket.on('whiteboard_lock_status', (status) => {
-          setIsWhiteboardLocked(status);
-      });
-      
-      socket.on('incoming_video_call', (callerName) => {
-          setIncomingCall(callerName);
-      });
-      
-      socket.on('admin_end_call_receive', () => {
-          setIsVideoCallActive(false);
-      });
     }
-    
-    return () => {
-        if (socket && user) {
-            socket.emit('disconnect_from_room', { roomId: id, username: user.username });
-            socket.off('recording_status');
-            socket.off('whiteboard_lock_status');
-            socket.off('incoming_video_call');
-            socket.off('admin_end_call_receive');
-        }
-    }
-  }, [socket, user, id]);
+  }, [id, socket, user, navigate]);
 
-  const toggleRecording = () => {
-      const newState = !isRecording;
-      setIsRecording(newState);
-      if (socket) {
-          socket.emit('recording_started', { roomId: id, isRecording: newState });
-      }
+  const copyRoomId = () => {
+    navigator.clipboard.writeText(id);
+    alert("Room ID copied to clipboard!");
   };
 
-  const toggleWhiteboardLock = () => {
-      // Typically restrict to admin/creator
-      if (user._id !== roomData?.creator && user.role !== 'admin') return;
-      
-      const newState = !isWhiteboardLocked;
-      setIsWhiteboardLocked(newState);
-      if (socket) {
-          socket.emit('whiteboard_toggle_lock', { roomId: id, isLocked: newState });
-      }
-  };
-
-  const requestVideoCall = () => {
-      setIsVideoCallActive(true);
-      if(socket) {
-          socket.emit('start_video_call', { roomId: id, callerName: user.username });
-      }
-  };
-
-  const handleEndCall = () => {
-      setIsVideoCallActive(false);
-      if (user._id === roomData?.creator || user.role === 'admin') {
-          socket.emit('admin_end_call', id);
-      }
-  };
-
-  if (!socket) return <div style={{ padding: '2rem' }}>Connecting to real-time sync...</div>;
+  const quickActions = [
+    { 
+      title: "Chat", 
+      icon: <MessageSquare size={28} />, 
+      color: "#22c55e", 
+      path: `/room/${id}/chat` 
+    },
+    { 
+      title: "Whiteboard", 
+      icon: <Palette size={28} />, 
+      color: "#3b82f6", 
+      path: `/room/${id}/whiteboard` 
+    },
+    { 
+      title: "Pomodoro Timer", 
+      icon: <Timer size={28} />, 
+      color: "#eab308", 
+      path: `/room/${id}/timer` 
+    },
+    { 
+      title: "Notes", 
+      icon: <StickyNote size={28} />, 
+      color: "#a855f7", 
+      path: `/room/${id}/notes` 
+    },
+  ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem', flexShrink: 0 }}>
-        <button className="btn btn-outline" onClick={() => navigate('/')} style={{ padding: '0.4rem 0.8rem' }}>
-            <ArrowLeft size={16} /> Back
-        </button>
-        <h2 style={{ margin: 0 }}>Study Room ({id})</h2>
-        
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            {isRecording && <span style={{ color: 'var(--danger)', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}><span className="pulse-indicator"></span> Recording Session</span>}
-            
-            {/* Feature Navigation Buttons */}
-            <div style={{ display: 'flex', gap: '0.5rem', borderRight: '1px solid var(--border-color)', paddingRight: '1rem' }}>
-                <button className="btn btn-outline" onClick={() => navigate(`/room/${id}/chat`)} title="Open Chat in Full Screen" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>
-                    <MessageSquare size={14} /> Chat
-                </button>
-                <button className="btn btn-outline" onClick={() => navigate(`/room/${id}/whiteboard`)} title="Open Whiteboard in Full Screen" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>
-                    <Palette size={14} /> Board
-                </button>
-                <button className="btn btn-outline" onClick={() => navigate(`/room/${id}/timer`)} title="Open Timer in Full Screen" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>
-                    <Timer size={14} /> Timer
-                </button>
-                <button className="btn btn-outline" onClick={() => navigate(`/room/${id}/notes`)} title="Open Notes in Full Screen" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>
-                    <StickyNote size={14} /> Notes
-                </button>
-            </div>
-            
-            {isCreator && (
-                <button className={`btn ${isWhiteboardLocked ? 'btn-danger' : 'btn-outline'}`} onClick={toggleWhiteboardLock}>
-                    {isWhiteboardLocked ? <Lock size={16} /> : <Unlock size={16} />} 
-                    {isWhiteboardLocked ? 'Board Locked' : 'Lock Board'}
-                </button>
-            )}
+    <div style={{ padding: '2rem' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
+        <div>
+          <h1 style={{ fontSize: '2.5rem', margin: '0 0 0.5rem 0' }}>{roomData?.name || "Study Room"}</h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem' }}>
+            Created by {roomData?.creator?.username || "Admin"} • Room ID: <strong>{id}</strong>
+          </p>
+        </div>
 
-            {!isVideoCallActive && (
-                <button className="btn btn-primary" onClick={requestVideoCall}>
-                    <Video size={16} /> Start Video Call
-                </button>
-            )}
-
-            <button className={`btn ${isRecording ? 'btn-danger' : 'btn-outline'}`} onClick={toggleRecording}>
-                {isRecording ? <VideoOff size={16} /> : <Video size={16} />} 
-                {isRecording ? 'Stop Recording' : 'Start Recording'}
-            </button>
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          <button onClick={copyRoomId} className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Copy size={18} /> Copy Room ID
+          </button>
+          <button onClick={() => navigate('/')} className="btn btn-outline">
+            ← Back to Dashboard
+          </button>
         </div>
       </div>
 
-      {incomingCall && !isVideoCallActive && (
-          <div className="glass-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#eff6ff', borderColor: 'var(--primary)', marginBottom: '1.5rem', padding: '1rem' }}>
-              <span style={{ fontWeight: 600 }}>📞 {incomingCall} is starting a video call...</span>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button className="btn btn-primary" onClick={() => { setIsVideoCallActive(true); setIncomingCall(null); }}>Accept</button>
-                  <button className="btn btn-danger" onClick={() => setIncomingCall(null)}>Decline</button>
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem' }}>
+
+        {/* Quick Actions */}
+        <div>
+          <h2 style={{ marginBottom: '1.5rem' }}>Quick Start</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.2rem' }}>
+            {quickActions.map((action, index) => (
+              <div 
+                key={index}
+                onClick={() => navigate(action.path)}
+                className="glass-card"
+                style={{ 
+                  padding: '2rem', 
+                  textAlign: 'center', 
+                  cursor: 'pointer',
+                  transition: 'transform 0.2s'
+                }}
+              >
+                <div style={{ color: action.color, marginBottom: '1rem' }}>
+                  {action.icon}
+                </div>
+                <h3 style={{ margin: '0 0 0.5rem 0' }}>{action.title}</h3>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>
+                  Click to open <ArrowRight size={16} style={{ verticalAlign: 'middle' }} />
+                </p>
               </div>
+            ))}
           </div>
-      )}
+        </div>
 
-      {/* Grid refactored: 3 columns if screen large, left heavy for board */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 300px 300px', gap: '1.5rem', flex: 1, minHeight: 0, height: 'calc(100vh - 160px)' }}>
-        
-        {/* Main Column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', minHeight: 0, height: '100%' }}>
-            {isVideoCallActive && <VideoGrid roomId={id} onEndCall={handleEndCall} />}
-            <div style={{ position: 'relative', flex: 1, minHeight: '300px', display: 'flex', flexDirection: 'column' }}>
-               {isWhiteboardLocked && <div style={{ position: 'absolute', inset: 0, zIndex: 10, background: 'rgba(255,255,255,0.3)', pointerEvents: 'none', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 'bold', border: '2px dashed var(--danger)' }}></div>}
-               {roomData ? <Whiteboard roomId={id} isLocked={isWhiteboardLocked} isCreator={isCreator} /> : <div className="glass-card" style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>Loading Whiteboard...</div>}
+        {/* Right Sidebar Info */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          
+          {/* Online Members */}
+          <div className="glass-card" style={{ padding: '1.5rem' }}>
+            <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Users size={20} /> Online Now
+            </h3>
+            <p style={{ color: 'var(--text-muted)' }}>
+              {onlineUsers.length || 1} member{onlineUsers.length !== 1 ? 's' : ''} online
+            </p>
+            {/* You can enhance this later with real online list */}
+          </div>
+
+          {/* Room Info */}
+          <div className="glass-card" style={{ padding: '1.5rem' }}>
+            <h3>Room Information</h3>
+            <div style={{ marginTop: '1rem', fontSize: '0.95rem', lineHeight: '1.6' }}>
+              <p><strong>ID:</strong> {id}</p>
+              <p><strong>Created:</strong> {roomData?.createdAt ? new Date(roomData.createdAt).toLocaleDateString() : 'Recently'}</p>
+              <p><strong>Participants:</strong> {roomData?.participants?.length || 1}</p>
             </div>
-        </div>
-        
-        {/* Chat Column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', minHeight: 0 }}>
-            <ChatBox roomId={id} username={user.username} />
-        </div>
+          </div>
 
-        {/* Tools Column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', minHeight: 0 }}>
-            <PomodoroTimer roomId={id} />
-            <PersonalNotes roomId={id} />
+          {/* Quick Invite */}
+          <div className="glass-card" style={{ padding: '1.5rem' }}>
+            <h3>Invite Friends</h3>
+            <p style={{ color: 'var(--text-muted)', margin: '0.8rem 0' }}>
+              Share this room ID with your friends
+            </p>
+            <div style={{ background: 'var(--bg-surface)', padding: '1rem', borderRadius: '8px', fontFamily: 'monospace', wordBreak: 'break-all' }}>
+              {id}
+            </div>
+          </div>
         </div>
       </div>
     </div>

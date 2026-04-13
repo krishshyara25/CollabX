@@ -1,22 +1,29 @@
 import React, { useEffect, useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { BookOpen, Home, MessageSquare, Palette, Timer, StickyNote, LogOut, Layers, Calendar, User, Shield } from 'lucide-react';
 
 const Sidebar = () => {
   const { user, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [currentRoomId, setCurrentRoomId] = useState(null);
 
   useEffect(() => {
     const path = location.pathname;
     const match = path.match(/\/room\/([^\/]+)/);
-    if (match) {
+    
+    if (match && match[1]) {
       setCurrentRoomId(match[1]);
+    } else {
+      setCurrentRoomId(null);
     }
   }, [location.pathname]);
 
-  if (!user || !currentRoomId) return null;
+  // Show sidebar if user is logged in AND we are inside a room
+  if (!user || !currentRoomId) {
+    return null;
+  }
 
   return (
     <div className="sidebar">
@@ -35,7 +42,7 @@ const Sidebar = () => {
           Room: {currentRoomId}
         </div>
 
-        {/* Main Room */}
+        {/* Main Room Home */}
         <NavLink 
           to={`/room/${currentRoomId}`} 
           className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
@@ -94,11 +101,21 @@ const Sidebar = () => {
         )}
       </div>
 
-      <div style={{ padding: '1.5rem 1rem', borderTop: '1px solid var(--border-color)', marginTop: 'auto' }}>
+      <div style={{ 
+        padding: '1.5rem 1rem', 
+        borderTop: '1px solid var(--border-color)', 
+        marginTop: 'auto' 
+      }}>
         <button 
           onClick={logout} 
           className="nav-item" 
-          style={{ width: '100%', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--danger)' }}
+          style={{ 
+            width: '100%', 
+            background: 'transparent', 
+            border: 'none', 
+            cursor: 'pointer', 
+            color: 'var(--danger)' 
+          }}
         >
           <LogOut size={20} /> Logout
         </button>
