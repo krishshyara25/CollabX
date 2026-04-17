@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Plus, Users, LogOut, ArrowRight, BookOpen, Zap, Clock, Hash, Trash2, Check, X } from 'lucide-react';
+import { Plus, Users, LogOut, ArrowRight, BookOpen, Zap, Clock, Hash, Trash2, Check, X, Calendar as CalendarIcon } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 
@@ -277,14 +277,23 @@ export default function Dashboard() {
             {[
               { label:'My Rooms', value: myRooms.length, color:'#2563eb', bg:'#eff6ff', border:'#bfdbfe' },
               { label:'Status', value:'Online', color:'#16a34a', bg:'#f0fdf4', border:'#bbf7d0' },
+              { label:'Calendar', value:'View', color:'#d946ef', bg:'#fdf4ff', border:'#fbcfe8', isLink:true, path:'/calendar' },
             ].map((s,i) => (
               <div key={i} style={{
                 background:s.bg, border:`1px solid ${s.border}`,
                 borderRadius:12, padding:'0.65rem 1.1rem', textAlign:'center',
                 animation:`fadeUp .4s ${.1+i*.1}s both`,
-              }}>
-                <div style={{ fontSize:'1.3rem', fontWeight:800, color:s.color, lineHeight:1 }}>{s.value}</div>
-                <div style={{ fontSize:'0.72rem', color:s.color, fontWeight:500, marginTop:2 }}>{s.label}</div>
+                cursor: s.isLink ? 'pointer' : 'default',
+                transition: 'transform 0.2s, box-shadow 0.2s',
+              }}
+              onClick={() => s.isLink && navigate(s.path)}
+              onMouseEnter={e => { if (s.isLink) { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(217, 70, 239, 0.2)'; } }}
+              onMouseLeave={e => { if (s.isLink) { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; } }}
+              >
+                <div style={{ fontSize:'1.3rem', fontWeight:800, color:s.color, lineHeight:1, display:'flex', justifyContent:'center' }}>
+                    {s.isLink ? <CalendarIcon size={24} style={{ marginBottom: '-2px' }} /> : s.value}
+                </div>
+                <div style={{ fontSize:'0.72rem', color:s.color, fontWeight:500, marginTop:4 }}>{s.label}</div>
               </div>
             ))}
           </div>

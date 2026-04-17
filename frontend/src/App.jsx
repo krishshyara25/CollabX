@@ -14,6 +14,7 @@ import Whiteboard from './pages/Whiteboard';
 import PomodoroTimer from './pages/PomodoroTimer';
 import Notes from './pages/Notes';
 import Scheduler from './pages/Scheduler';
+import StudyCalendar from './pages/StudyCalendar';
 import Profile from './pages/Profile';
 import Flashcards from './pages/Flashcards';
 import AdminPanel from './pages/AdminPanel';
@@ -124,6 +125,7 @@ const App = () => {
             {/* Other */}
             <Route path="/flashcards" element={<ProtectedRoute><Flashcards /></ProtectedRoute>} />
             <Route path="/scheduler" element={<ProtectedRoute><Scheduler /></ProtectedRoute>} />
+            <Route path="/calendar" element={<ProtectedRoute><StudyCalendar /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute><AdminPanel /></ProtectedRoute>} />
 

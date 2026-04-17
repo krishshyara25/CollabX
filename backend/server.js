@@ -14,6 +14,7 @@ const adminRoutes = require('./routes/adminRoutes');
 const messageRoutes = require('./routes/messageRoutes');
 const whiteboardRoutes = require('./routes/whiteboardRoutes');
 const noteRoutes = require('./routes/noteRoutes');
+const calendarRoutes = require('./routes/calendarRoutes');
 
 // Load env vars
 dotenv.config();
@@ -36,6 +37,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/whiteboard', whiteboardRoutes);
 app.use('/api/notes', noteRoutes);
+app.use('/api/calendar', calendarRoutes);
 
 app.get('/', (req, res) => {
   res.send('API is running...');
