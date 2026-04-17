@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { Users, MessageSquare, Palette, Timer, StickyNote, Video, Copy, ArrowLeft, Check, Zap } from 'lucide-react';
 import axios from 'axios';
+import { toast } from 'react-toastify';
 
 const KEYFRAMES = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -20,6 +21,15 @@ const KEYFRAMES = `
 `;
 
 const ACTIONS = [
+  {
+    title: 'Video Call',
+    desc: 'Face-to-face team call',
+    icon: Video,
+    gradient: 'linear-gradient(135deg,#3b82f6,#2dd4bf)',
+    glow: 'rgba(59,130,246,.3)',
+    bg: '#eff6ff',
+    key: 'video',
+  },
   {
     title: 'Chat',
     desc: 'Real-time group messaging',
@@ -106,8 +116,32 @@ export default function StudyRoom() {
     if (socket) {
       socket.emit('join_room', { roomId: id, username: user?.username });
       socket.on('room_users', (users) => setOnlineUsers(users));
+      
+      const handleIncomingCall = ({ callerName, targetUsers }) => {
+        if (targetUsers.includes(user.username)) {
+          toast.info(
+            <div>
+              <p style={{ margin: 0, fontWeight: 600 }}>📡 {callerName} invited you to a Video Call!</p>
+              <button 
+                  onClick={() => navigate(`/room/${id}/video?autoJoin=true`)}
+                  style={{ marginTop: '10px', background: '#3b82f6', color: 'white', padding: '0.4rem 0.8rem', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', width: '100%' }}
+              >
+                  Click to Join
+              </button>
+            </div>,
+            { autoClose: 20000, position: 'top-center', closeOnClick: false }
+          );
+        }
+      };
+
+      socket.on('incoming_video_call', handleIncomingCall);
     }
-    return () => { if (socket) socket.off('room_users'); };
+    return () => { 
+        if (socket) {
+            socket.off('room_users'); 
+            socket.off('incoming_video_call');
+        }
+    };
   }, [id, socket, user, navigate]);
 
   const handleCopy = () => {

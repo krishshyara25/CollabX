@@ -1,13 +1,43 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { BookOpen, Home, MessageSquare, Palette, Timer, StickyNote, LogOut, Layers, Calendar, User, Shield, CalendarDays } from 'lucide-react';
+import { useSocket } from '../context/SocketContext';
+import { toast } from 'react-toastify';
+import { BookOpen, Home, MessageSquare, Palette, Timer, StickyNote, LogOut, Layers, Calendar, User, Shield, CalendarDays, Video } from 'lucide-react';
 
 const Sidebar = () => {
   const { user, logout } = useAuth();
+  const socket = useSocket();
   const location = useLocation();
   const navigate = useNavigate();
   const [currentRoomId, setCurrentRoomId] = useState(null);
+
+  useEffect(() => {
+    if (socket && user) {
+      const handleIncomingCall = ({ callerName, targetUsers, roomId }) => {
+        if (targetUsers.includes(user.username)) {
+          toast.info(
+            <div>
+              <p style={{ margin: 0, fontWeight: 600 }}>📡 {callerName} invited you to a Video Call!</p>
+              <button 
+                  onClick={() => { navigate(`/room/${currentRoomId || roomId}/video?autoJoin=true`); toast.dismiss(); }}
+                  style={{ marginTop: '10px', background: '#3b82f6', color: 'white', padding: '0.4rem 0.8rem', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', width: '100%' }}
+              >
+                  Join Call
+              </button>
+            </div>,
+            { autoClose: 20000, position: 'top-center', closeOnClick: false }
+          );
+        }
+      };
+
+      socket.on('incoming_video_call', handleIncomingCall);
+
+      return () => {
+        socket.off('incoming_video_call', handleIncomingCall);
+      };
+    }
+  }, [socket, user, navigate, currentRoomId]);
 
   useEffect(() => {
     const path = location.pathname;
@@ -56,6 +86,13 @@ const Sidebar = () => {
           className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
         >
           <MessageSquare size={20} /> Chat
+        </NavLink>
+
+        <NavLink
+          to={`/room/${currentRoomId}/video`}
+          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+        >
+          <Video size={20} /> Video Call
         </NavLink>
 
         <NavLink

@@ -36,7 +36,9 @@ const getRooms = async (req, res) => {
 
 const getRoom = async (req, res) => {
   try {
-    const room = await Room.findById(req.params.id).populate('creator', 'username');
+    const room = await Room.findById(req.params.id)
+      .populate('creator', 'username')
+      .populate('participants', 'username');
     if (!room) return res.status(404).json({ message: 'Room not found' });
     res.json(room);
   } catch (error) {

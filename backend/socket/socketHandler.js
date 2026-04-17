@@ -81,8 +81,8 @@ const socketHandler = (io) => {
     });
 
     // WebRTC Signaling
-    socket.on('start_video_call', ({ roomId, callerName }) => {
-        socket.to(roomId).emit('incoming_video_call', callerName);
+    socket.on('start_video_call', ({ roomId, callerName, targetUsers }) => {
+        socket.to(roomId).emit('incoming_video_call', { callerName, targetUsers, roomId });
     });
     
     socket.on('admin_end_call', (roomId) => {

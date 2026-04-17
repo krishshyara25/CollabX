@@ -10,6 +10,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import StudyRoom from './pages/StudyRoom';
 import Chat from './pages/Chat';
+import VideoCall from './pages/VideoCall';
 import Whiteboard from './pages/Whiteboard';
 import PomodoroTimer from './pages/PomodoroTimer';
 import Notes from './pages/Notes';
@@ -40,101 +41,51 @@ const App = () => {
     location.pathname === '/register';
 
   return (
-    <div className="app-container">
-      {!hideSidebar && <Sidebar />}
+      <SocketProvider>
+        <div className="app-container">
+          {!hideSidebar && <Sidebar />}
 
-      <div className="main-content">
-        {!hideSidebar && <Topbar />}
+          <div className="main-content">
+            {!hideSidebar && <Topbar />}
 
-        <div className={hideSidebar ? '' : 'content-wrapper'}>
-          <Routes>
+            <div className={hideSidebar ? '' : 'content-wrapper'}>
+              <Routes>
 
-            {/* 🔥 Landing Page */}
-            <Route path="/" element={<Home />} />
+                {/* 🔥 Landing Page */}
+                <Route path="/" element={<Home />} />
 
-            {/* Auth */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+                {/* Auth */}
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
 
-            {/* 🔥 Dashboard moved */}
-            <Route 
-              path="/dashboard" 
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              } 
-            />
+                {/* 🔥 Dashboard moved */}
+                <Route 
+                  path="/dashboard" 
+                  element={<ProtectedRoute><Dashboard /></ProtectedRoute>} 
+                />
 
-            {/* Study Room */}
-            <Route 
-              path="/room/:id" 
-              element={
-                <ProtectedRoute>
-                  <SocketProvider>
-                    <StudyRoom />
-                  </SocketProvider>
-                </ProtectedRoute>
-              } 
-            />
+                {/* Study Room */}
+                <Route path="/room/:id" element={<ProtectedRoute><StudyRoom /></ProtectedRoute>} />
+                <Route path="/room/:id/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
+                <Route path="/room/:id/video" element={<ProtectedRoute><VideoCall /></ProtectedRoute>} />
+                <Route path="/room/:id/whiteboard" element={<ProtectedRoute><Whiteboard /></ProtectedRoute>} />
+                <Route path="/room/:id/timer" element={<ProtectedRoute><PomodoroTimer /></ProtectedRoute>} />
+                <Route path="/room/:id/notes" element={<ProtectedRoute><Notes /></ProtectedRoute>} />
 
-            <Route 
-              path="/room/:id/chat" 
-              element={
-                <ProtectedRoute>
-                  <SocketProvider>
-                    <Chat />
-                  </SocketProvider>
-                </ProtectedRoute>
-              } 
-            />
+                {/* Other */}
+                <Route path="/flashcards" element={<ProtectedRoute><Flashcards /></ProtectedRoute>} />
+                <Route path="/scheduler" element={<ProtectedRoute><Scheduler /></ProtectedRoute>} />
+                <Route path="/calendar" element={<ProtectedRoute><StudyCalendar /></ProtectedRoute>} />
+                <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                <Route path="/admin" element={<ProtectedRoute><AdminPanel /></ProtectedRoute>} />
 
-            <Route 
-              path="/room/:id/whiteboard" 
-              element={
-                <ProtectedRoute>
-                  <SocketProvider>
-                    <Whiteboard />
-                  </SocketProvider>
-                </ProtectedRoute>
-              } 
-            />
+              </Routes>
+            </div>
+          </div>
 
-            <Route 
-              path="/room/:id/timer" 
-              element={
-                <ProtectedRoute>
-                  <SocketProvider>
-                    <PomodoroTimer />
-                  </SocketProvider>
-                </ProtectedRoute>
-              } 
-            />
-
-            <Route 
-              path="/room/:id/notes" 
-              element={
-                <ProtectedRoute>
-                  <SocketProvider>
-                    <Notes />
-                  </SocketProvider>
-                </ProtectedRoute>
-              } 
-            />
-
-            {/* Other */}
-            <Route path="/flashcards" element={<ProtectedRoute><Flashcards /></ProtectedRoute>} />
-            <Route path="/scheduler" element={<ProtectedRoute><Scheduler /></ProtectedRoute>} />
-            <Route path="/calendar" element={<ProtectedRoute><StudyCalendar /></ProtectedRoute>} />
-            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-            <Route path="/admin" element={<ProtectedRoute><AdminPanel /></ProtectedRoute>} />
-
-          </Routes>
+          <ToastContainer position="top-right" autoClose={3000} />
         </div>
-      </div>
-
-      <ToastContainer position="top-right" autoClose={3000} />
-    </div>
+      </SocketProvider>
   );
 };
 
